@@ -38,3 +38,10 @@ def test_scrobble_dedup_set(tmp_path):
     db.record_scrobble("episode", 9, at=456)  # idempotent
     db.record_scrobble("movie", 5, at=789)
     assert db.scrobbled_ids() == {("episode", 9), ("movie", 5)}
+
+
+def test_creates_missing_parent_dirs(tmp_path):
+    nested = tmp_path / "sub" / "dir" / "state.db"
+    db = StateDB(nested)
+    db.record_scrobble("movie", 1, at=1)
+    assert nested.exists()
