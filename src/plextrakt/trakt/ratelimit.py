@@ -1,3 +1,4 @@
+import threading
 import time
 
 
@@ -7,10 +8,12 @@ class WriteRateLimiter:
         self._clock = clock
         self._sleep = sleep
         self._last: float | None = None
+        self._mutex = threading.Lock()
 
     def wait(self) -> None:
-        if self._last is not None:
-            elapsed = self._clock() - self._last
-            if elapsed < self._min_interval:
-                self._sleep(self._min_interval - elapsed)
-        self._last = self._clock()
+        with self._mutex:
+            if self._last is not None:
+                elapsed = self._clock() - self._last
+                if elapsed < self._min_interval:
+                    self._sleep(self._min_interval - elapsed)
+            self._last = self._clock()
