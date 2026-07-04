@@ -95,9 +95,12 @@ class TraktClient:
             metrics.TRAKT_REQUESTS.labels(status=str(resp.status_code)).inc()
             if resp.status_code == 429:
                 metrics.TRAKT_RATE_LIMITED.inc()
-                self._sleep(float(resp.headers.get("Retry-After", "1")))
+                retry_after = float(resp.headers.get("Retry-After", "1"))
+                log.warning("trakt_rate_limited", retry_after=retry_after)
+                self._sleep(retry_after)
                 continue
             if resp.status_code == 401 and not refreshed:
+                log.info("trakt_token_refresh", reason="401")
                 self._auth.refresh()
                 refreshed = True
                 continue

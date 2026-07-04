@@ -158,3 +158,43 @@ def test_server_error_raises_trakt_error():
     client, _ = make_client()
     with pytest.raises(TraktError):
         client.watched_movies()
+
+
+@respx.mock
+def test_401_refreshes_once_and_retries():
+    route = respx.get("https://api.trakt.tv/sync/watched/movies")
+    route.side_effect = [
+        httpx.Response(401),
+        httpx.Response(200, json=[]),
+    ]
+    auth = FakeAuth()
+    client = TraktClient(auth, NoopLimiter(), httpx.Client())
+    assert client.watched_movies() == []
+    assert auth.refreshed == 1
+    assert route.call_count == 2
+
+
+@respx.mock
+def test_add_history_mixed_batch_chunks_correctly():
+    bodies = []
+
+    def capture(request):
+        import json as _json
+
+        bodies.append(_json.loads(request.content))
+        return httpx.Response(
+            201,
+            json={
+                "added": {"movies": 0, "episodes": 0},
+                "not_found": {"movies": [], "shows": [], "seasons": [], "episodes": []},
+            },
+        )
+
+    respx.post("https://api.trakt.tv/sync/history").mock(side_effect=capture)
+    client, _ = make_client()
+    movies = [{"ids": {"tmdb": i}} for i in range(150)]
+    episodes = [{"ids": {"trakt": i}} for i in range(100)]
+    client.add_history(movies=movies, episodes=episodes)
+    assert len(bodies) == 2  # 150 movies + 50 episodes, then 50 episodes
+    assert len(bodies[0]["movies"]) == 150 and len(bodies[0]["episodes"]) == 50
+    assert "movies" not in bodies[1] and len(bodies[1]["episodes"]) == 50
