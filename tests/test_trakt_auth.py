@@ -84,3 +84,26 @@ def test_access_token_without_login_raises(tmp_path):
     auth, _ = make_auth(tmp_path)
     with pytest.raises(TraktAuthError):
         auth.access_token()
+
+
+@respx.mock
+def test_concurrent_refresh_fires_once(tmp_path):
+    import threading
+
+    auth, db = make_auth(tmp_path, now=lambda: 1719100000.0)
+    db.save_tokens(TokenPair("old_acc", "old_ref", 1719000000, 86400))
+    route = respx.post("https://api.trakt.tv/oauth/token").respond(
+        200, json={**TOKENS, "access_token": "acc2", "refresh_token": "ref2"}
+    )
+    barrier = threading.Barrier(2)
+    results = []
+
+    def worker():
+        barrier.wait()
+        results.append(auth.access_token())
+
+    threads = [threading.Thread(target=worker) for _ in range(2)]
+    [t.start() for t in threads]
+    [t.join() for t in threads]
+    assert results == ["acc2", "acc2"]
+    assert route.call_count == 1

@@ -1,7 +1,12 @@
+import threading
 import time
+from typing import TYPE_CHECKING
 
 import httpx
 import structlog
+
+if TYPE_CHECKING:
+    from plextrakt.state.db import TokenPair
 
 BASE = "https://api.trakt.tv"
 _FATAL_POLL = {
@@ -30,6 +35,7 @@ class TraktAuth:
         self._http = http
         self._sleep = sleep
         self._now = now
+        self._refresh_lock = threading.Lock()
 
     def request_device_code(self) -> dict:
         resp = self._http.post(f"{BASE}/oauth/device/code", json={"client_id": self.client_id})
@@ -62,24 +68,28 @@ class TraktAuth:
             resp.raise_for_status()
         raise TraktAuthError("code_expired")
 
-    def refresh(self):
-        pair = self._db.load_tokens()
-        if pair is None:
-            raise TraktAuthError("login_required")
-        resp = self._http.post(
-            f"{BASE}/oauth/token",
-            json={
-                "refresh_token": pair.refresh_token,
-                "client_id": self.client_id,
-                "client_secret": self._client_secret,
-                "redirect_uri": "urn:ietf:wg:oauth:2.0:oob",
-                "grant_type": "refresh_token",
-            },
-        )
-        if resp.status_code in (400, 401):
-            raise TraktAuthError("login_required")
-        resp.raise_for_status()
-        return self._store(resp.json())
+    def refresh(self, stale: "TokenPair | None" = None):
+        with self._refresh_lock:
+            pair = self._db.load_tokens()
+            if pair is None:
+                raise TraktAuthError("login_required")
+            if stale is not None and pair.refresh_token != stale.refresh_token:
+                # another thread already rotated the refresh token; no HTTP call needed
+                return pair
+            resp = self._http.post(
+                f"{BASE}/oauth/token",
+                json={
+                    "refresh_token": pair.refresh_token,
+                    "client_id": self.client_id,
+                    "client_secret": self._client_secret,
+                    "redirect_uri": "urn:ietf:wg:oauth:2.0:oob",
+                    "grant_type": "refresh_token",
+                },
+            )
+            if resp.status_code in (400, 401):
+                raise TraktAuthError("login_required")
+            resp.raise_for_status()
+            return self._store(resp.json())
 
     def access_token(self) -> str:
         pair = self._db.load_tokens()
@@ -87,7 +97,7 @@ class TraktAuth:
             raise TraktAuthError("login_required")
         if self._now() >= pair.refresh_after:
             log.info("trakt_token_refresh", reason="proactive")
-            pair = self.refresh()
+            pair = self.refresh(stale=pair)
         return pair.access_token
 
     def _store(self, payload: dict):
