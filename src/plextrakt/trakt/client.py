@@ -27,10 +27,10 @@ class TraktClient:
     # -- public API --------------------------------------------------------
 
     def watched_movies(self) -> list[dict]:
-        return self._get("/sync/watched/movies")
+        return self._get_all_pages("/sync/watched/movies")
 
     def watched_shows(self) -> list[dict]:
-        return self._get("/sync/watched/shows")
+        return self._get_all_pages("/sync/watched/shows")
 
     def add_history(self, movies=(), episodes=()) -> dict:
         items = [("movies", m) for m in movies] + [("episodes", e) for e in episodes]
@@ -80,6 +80,19 @@ class TraktClient:
 
     def _get(self, path: str, params: dict | None = None):
         return self._request("GET", path, params=params).json()
+
+    def _get_all_pages(self, path: str, params: dict | None = None) -> list:
+        params = dict(params or {})
+        params.setdefault("limit", 100)
+        page = 1
+        out: list = []
+        while True:
+            resp = self._request("GET", path, params={**params, "page": page})
+            out.extend(resp.json())
+            page_count = int(resp.headers.get("X-Pagination-Page-Count", "1"))
+            if page >= page_count:
+                return out
+            page += 1
 
     def _post(self, path: str, body: dict):
         return self._request("POST", path, json=body, write=True).json()

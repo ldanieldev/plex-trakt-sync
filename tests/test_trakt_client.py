@@ -198,3 +198,39 @@ def test_add_history_mixed_batch_chunks_correctly():
     assert len(bodies) == 2  # 150 movies + 50 episodes, then 50 episodes
     assert len(bodies[0]["movies"]) == 150 and len(bodies[0]["episodes"]) == 50
     assert "movies" not in bodies[1] and len(bodies[1]["episodes"]) == 50
+
+
+@respx.mock
+def test_watched_movies_follows_pagination():
+    route = respx.get("https://api.trakt.tv/sync/watched/movies")
+    route.side_effect = [
+        httpx.Response(
+            200,
+            json=[{"movie": {"ids": {"trakt": i}}} for i in range(100)],
+            headers={"X-Pagination-Page": "1", "X-Pagination-Page-Count": "3"},
+        ),
+        httpx.Response(
+            200,
+            json=[{"movie": {"ids": {"trakt": i}}} for i in range(100, 200)],
+            headers={"X-Pagination-Page": "2", "X-Pagination-Page-Count": "3"},
+        ),
+        httpx.Response(
+            200,
+            json=[{"movie": {"ids": {"trakt": i}}} for i in range(200, 237)],
+            headers={"X-Pagination-Page": "3", "X-Pagination-Page-Count": "3"},
+        ),
+    ]
+    client, _ = make_client()
+    rows = client.watched_movies()
+    assert len(rows) == 237
+    assert route.call_count == 3
+    # each request must carry explicit page + limit params
+    assert "page=1" in str(route.calls[0].request.url)
+    assert "page=3" in str(route.calls[2].request.url)
+
+
+@respx.mock
+def test_watched_shows_single_page_without_headers():
+    respx.get("https://api.trakt.tv/sync/watched/shows").respond(200, json=[{"show": {}}])
+    client, _ = make_client()
+    assert client.watched_shows() == [{"show": {}}]
