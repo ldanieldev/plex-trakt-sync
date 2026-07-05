@@ -58,9 +58,10 @@ class AppContext:
         return PlexLibrary(PlexServer(self.settings.plex_url, self.settings.plex_token))
 
     def engine(self):
+        from plextrakt.matching.resolver import Resolver
         from plextrakt.sync.engine import SyncEngine
 
-        return SyncEngine(self.plex, self.trakt, self.resolver, self.db)
+        return SyncEngine(self.plex, self.trakt, Resolver(self.trakt, self.db), self.db)
 
     def scrobbler(self):
         from plextrakt.scrobble.scrobbler import Scrobbler

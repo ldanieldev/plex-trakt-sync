@@ -53,3 +53,16 @@ def test_help_lists_commands():
     result = runner.invoke(cli.app, ["--help"])
     for cmd in ("login", "sync", "watch", "run"):
         assert cmd in result.output
+
+
+def test_engine_gets_fresh_resolver_per_run(monkeypatch):
+    for k, v in {
+        "PLEX_URL": "http://plex:32400", "PLEX_TOKEN": "t",
+        "TRAKT_CLIENT_ID": "c", "TRAKT_CLIENT_SECRET": "s",
+        "STATE_DIR": "/tmp/plextrakt-test-state",
+    }.items():
+        monkeypatch.setenv(k, v)
+    ctx = cli.AppContext()
+    monkeypatch.setattr(type(ctx), "plex", property(lambda self: object()))
+    e1, e2 = ctx.engine(), ctx.engine()
+    assert e1._resolver is not e2._resolver
