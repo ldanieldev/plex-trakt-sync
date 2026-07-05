@@ -102,3 +102,5 @@ class Scrobbler:
         trakt_id = ids.get("trakt")
         if trakt_id is not None:
             self._db.record_scrobble(session.media_type, trakt_id, int(self._now()))
+        else:
+            log.warning("scrobble_response_missing_id", media_type=session.media_type)

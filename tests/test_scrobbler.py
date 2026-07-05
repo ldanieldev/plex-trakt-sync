@@ -125,3 +125,12 @@ def test_buffering_is_ignored(tmp_path):
     s.handle_playing(notif("playing"))
     s.handle_playing(notif("buffering"))
     assert [a for a, _ in trakt.calls] == ["start"]
+
+
+def test_malformed_scrobble_response_logs_and_skips_record(tmp_path):
+    trakt = FakeTrakt()
+    trakt.stop_response = {"action": "scrobble", "id": 999}  # no movie/episode ids
+    s, _, _, db = make(tmp_path, trakt=trakt)
+    s.handle_playing(notif("playing"))
+    s.handle_playing(notif("stopped", offset=95_000))  # must not raise
+    assert db.scrobbled_ids() == set()
