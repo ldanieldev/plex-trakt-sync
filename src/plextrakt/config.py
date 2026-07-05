@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     log_format: str = "json"
     state_dir: Path = Path("/config")
+    plex_exclude_libraries: str = ""
 
     @property
     def sync_interval_seconds(self) -> int:
@@ -22,3 +23,9 @@ class Settings(BaseSettings):
         if raw and raw[-1] in _UNITS:
             return int(float(raw[:-1]) * _UNITS[raw[-1]])
         return int(raw)
+
+    @property
+    def plex_exclude_libraries_set(self) -> frozenset[str]:
+        return frozenset(
+            t.strip().lower() for t in self.plex_exclude_libraries.split(",") if t.strip()
+        )

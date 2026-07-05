@@ -42,11 +42,15 @@ def _epoch(dt) -> int | None:
 
 
 class PlexLibrary:
-    def __init__(self, server):
+    def __init__(self, server, exclude_libraries: frozenset[str] = frozenset()):
         self._server = server
+        self._exclude = exclude_libraries
 
     def scan(self) -> Iterator[PlexItem]:
         for section in self._server.library.sections():
+            if section.title.lower() in self._exclude:
+                log.info("section_excluded", section=section.title)
+                continue
             if section.type == "movie":
                 yield from self._scan_movies(section)
             elif section.type == "show":

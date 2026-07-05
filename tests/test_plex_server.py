@@ -127,3 +127,11 @@ def test_legacy_episode_show_attribution_and_empty_own_ids():
     assert item.show_guids[0].provider == "tvdb"
     assert item.show_guids[0].id == "81189"
     assert (item.season, item.number) == (3, 7)
+
+
+def test_scan_skips_excluded_sections():
+    included = FakeSection("movie", movies=[make_movie()], title="Movies")
+    excluded = FakeSection("movie", movies=[make_movie()], title="Other Videos")
+    server = FakePlexServer(sections=[included, excluded])
+    lib = PlexLibrary(server, exclude_libraries=frozenset({"other videos"}))
+    assert len(list(lib.scan())) == 1

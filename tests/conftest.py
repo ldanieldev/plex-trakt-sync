@@ -57,6 +57,7 @@ class FakeSection:
     movies: list = field(default_factory=list)
     shows: list = field(default_factory=list)
     episodes: list = field(default_factory=list)
+    title: str = ""
 
     def search(self, libtype=None, **kwargs):
         return {"movie": self.movies, "show": self.shows, "episode": self.episodes}[libtype]

@@ -43,3 +43,14 @@ def test_missing_required_raises(monkeypatch):
         monkeypatch.delenv(k, raising=False)
     with pytest.raises(ValidationError):
         Settings()
+
+
+def test_plex_exclude_libraries_parsing(monkeypatch):
+    set_required(monkeypatch)
+    monkeypatch.setenv("PLEX_EXCLUDE_LIBRARIES", "Other Videos, Music ,")
+    assert Settings().plex_exclude_libraries_set == frozenset({"other videos", "music"})
+
+
+def test_plex_exclude_libraries_default_empty(monkeypatch):
+    set_required(monkeypatch)
+    assert Settings().plex_exclude_libraries_set == frozenset()

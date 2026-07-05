@@ -55,7 +55,10 @@ class AppContext:
 
         from plextrakt.plex.server import PlexLibrary
 
-        return PlexLibrary(PlexServer(self.settings.plex_url, self.settings.plex_token))
+        return PlexLibrary(
+            PlexServer(self.settings.plex_url, self.settings.plex_token),
+            self.settings.plex_exclude_libraries_set,
+        )
 
     def engine(self):
         from plextrakt.matching.resolver import Resolver
