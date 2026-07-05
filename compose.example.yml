@@ -8,6 +8,7 @@ services:
       TRAKT_CLIENT_ID: "${TRAKT_CLIENT_ID}"
       TRAKT_CLIENT_SECRET: "${TRAKT_CLIENT_SECRET}"
       SYNC_INTERVAL: "6h"
+    # host dir must be owned by uid 1000 (chown -R 1000:1000 /mnt/pool/apps/plextrakt) before first run
     volumes:
       - /mnt/pool/apps/plextrakt:/config
     ports:
