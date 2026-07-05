@@ -20,7 +20,7 @@ class _TraktWatched:
         self._movie_ids: set[tuple[str, object]] = set()
         for row in movies:
             for k, v in row["movie"]["ids"].items():
-                if v is not None:
+                if isinstance(v, (str, int)):
                     self._movie_ids.add((k, v))
         self._episodes: dict[int, set[tuple[int, int]]] = {}
         for row in shows:

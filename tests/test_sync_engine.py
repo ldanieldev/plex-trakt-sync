@@ -54,7 +54,10 @@ class FakeTrakt:
             {
                 "plays": 1,
                 "last_watched_at": "2026-01-01T00:00:00.000Z",
-                "movie": {"title": "w", "ids": {"trakt": 900, "imdb": i}},
+                "movie": {
+                    "title": "w",
+                    "ids": {"trakt": 900, "imdb": i, "plex": {"guid": "abc123", "slug": "x"}},
+                },
             }
             for i in watched_movie_ids
         ]
