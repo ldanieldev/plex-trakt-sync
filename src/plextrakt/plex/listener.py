@@ -35,8 +35,14 @@ class SupervisedListener:
 
     def run_forever(self) -> None:
         while not self._stop.is_set():
-            listener = self._factory(self._server, self._callback, self._on_error)
-            listener.start()
+            try:
+                listener = self._factory(self._server, self._callback, self._on_error)
+                listener.start()
+            except Exception:
+                metrics.LISTENER_RESTARTS.inc()
+                log.exception("listener_start_failed", delay=self._restart_delay)
+                self._sleep(self._restart_delay)
+                continue
             log.info("listener_started")
             while listener.is_alive() and not self._stop.is_set():
                 self._sleep(self._check_interval)

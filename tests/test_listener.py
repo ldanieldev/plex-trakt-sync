@@ -77,3 +77,32 @@ def test_callback_survives_handler_exception():
     )
     # must not raise
     sup._callback({"type": "playing", "PlaySessionStateNotification": [{"state": "playing"}]})
+
+
+def test_factory_failure_retries_instead_of_crashing():
+    created = []
+    stop = threading.Event()
+    sleeps = []
+
+    def flaky_factory(server, callback, callback_error):
+        if not created:
+            created.append("failed")
+            raise RuntimeError("plex unreachable")
+        listener = DyingListener(server, callback, callback_error)
+        created.append(listener)
+        return listener
+
+    def fake_sleep(s):
+        sleeps.append(s)
+        if len(created) >= 2:
+            stop.set()
+
+    sup = SupervisedListener(
+        server=object(),
+        on_playing=lambda n: None,
+        listener_factory=flaky_factory,
+        sleep=fake_sleep,
+        stop_event=stop,
+    )
+    sup.run_forever()  # must not raise
+    assert len(created) >= 2  # failed once, then a real listener was created
