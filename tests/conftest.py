@@ -1,3 +1,4 @@
+import types
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
@@ -76,6 +77,7 @@ class FakeSession:
     sessionKey: int
     ratingKey: int
     user: FakeUser
+    _userId: int | None = None
 
 
 class FakeLibrary:
@@ -87,16 +89,20 @@ class FakeLibrary:
 
 
 class FakePlexServer:
-    def __init__(self, sections=(), items=(), sessions=()):
+    def __init__(self, sections=(), items=(), sessions=(), owner_id: int = 7742299):
         self.library = FakeLibrary(list(sections))
         self._items = {i.ratingKey: i for i in items}
         self._sessions = list(sessions)
+        self._owner_id = owner_id
 
     def fetchItem(self, rating_key):
         return self._items[int(rating_key)]
 
     def sessions(self):
         return self._sessions
+
+    def myPlexAccount(self):
+        return types.SimpleNamespace(id=self._owner_id)
 
 
 def dt(epoch: int) -> datetime:

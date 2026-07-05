@@ -96,13 +96,23 @@ class PlexLibrary:
     def mark_watched(self, rating_key: int) -> None:
         self._server.fetchItem(int(rating_key)).markWatched()
 
+    @property
+    def _owner_id(self):
+        if not hasattr(self, "_owner_id_cache"):
+            self._owner_id_cache = self._server.myPlexAccount().id
+        return self._owner_id_cache
+
     def owner_session(self, session_key) -> PlexItem | None:
         session = next(
             (s for s in self._server.sessions() if str(s.sessionKey) == str(session_key)),
             None,
         )
-        if session is None or getattr(session.user, "id", None) != 1:
+        if session is None:
             return None
+        if getattr(session, "_userId", None) != 1:
+            user_id = getattr(session.user, "id", None)
+            if user_id is None or user_id != self._owner_id:
+                return None
         item = self._server.fetchItem(int(session.ratingKey))
         if item.type == "movie":
             return PlexItem(

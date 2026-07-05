@@ -60,6 +60,7 @@ class Scrobbler:
     def _open_session(self, key: str):
         item = self._plex.owner_session(key)
         if item is None:
+            log.info("session_ignored", session_key=key)
             self._sessions[key] = _IGNORED
             return _IGNORED
         payload = self._build_payload(item)

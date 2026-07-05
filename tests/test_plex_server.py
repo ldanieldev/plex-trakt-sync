@@ -69,24 +69,46 @@ def test_mark_watched():
     assert movie.marked is True
 
 
-def test_owner_session_filters_non_owner():
+def test_owner_session_via_userid_convention():
+    # owner: session._userId == 1, user object is the big-id account
     movie = make_movie()
     server = FakePlexServer(
         items=[movie],
-        sessions=[FakeSession(sessionKey=7, ratingKey=1, user=FakeUser(id=33))],
+        sessions=[FakeSession(sessionKey=7, ratingKey=1, user=FakeUser(id=7742299), _userId=1)],
+    )
+    item = PlexLibrary(server).owner_session(7)
+    assert item is not None and item.rating_key == 1
+
+
+def test_owner_session_via_account_id_fallback():
+    # no _userId, but user.id matches the server owner's account id
+    movie = make_movie()
+    server = FakePlexServer(
+        items=[movie],
+        sessions=[FakeSession(sessionKey=7, ratingKey=1, user=FakeUser(id=7742299))],
+    )
+    assert PlexLibrary(server).owner_session(7) is not None
+
+
+def test_owner_session_rejects_other_users():
+    movie = make_movie()
+    server = FakePlexServer(
+        items=[movie],
+        sessions=[FakeSession(sessionKey=7, ratingKey=1, user=FakeUser(id=33), _userId=5)],
     )
     assert PlexLibrary(server).owner_session(7) is None
 
 
-def test_owner_session_returns_item():
+def test_owner_session_rejects_userid_one_without_matching_account():
+    # user.id of 1 with no _userId encoded the old bug; must now be rejected
+    # unless it actually equals the server's owner account id.
     movie = make_movie()
     server = FakePlexServer(
         items=[movie],
         sessions=[FakeSession(sessionKey=7, ratingKey=1, user=FakeUser(id=1))],
+        owner_id=7742299,
     )
-    item = PlexLibrary(server).owner_session(7)
-    assert item.rating_key == 1
-    assert item.duration_ms == 6_000_000
+    assert PlexLibrary(server).owner_session(7) is None
 
 
 def test_owner_session_unknown_key():
