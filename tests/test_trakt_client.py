@@ -45,13 +45,13 @@ def test_headers_sent():
 
 @respx.mock
 def test_429_retries_with_retry_after():
-    route = respx.get("https://api.trakt.tv/sync/watched/shows")
+    route = respx.get("https://api.trakt.tv/sync/watched/episodes")
     route.side_effect = [
         httpx.Response(429, headers={"Retry-After": "0"}),
-        httpx.Response(200, json=[{"show": {}}]),
+        httpx.Response(200, json=[{"episode": {}}]),
     ]
     client, _ = make_client()
-    assert client.watched_shows() == [{"show": {}}]
+    assert client.watched_episodes() == [{"episode": {}}]
     assert route.call_count == 2
 
 
@@ -230,7 +230,7 @@ def test_watched_movies_follows_pagination():
 
 
 @respx.mock
-def test_watched_shows_single_page_without_headers():
-    respx.get("https://api.trakt.tv/sync/watched/shows").respond(200, json=[{"show": {}}])
+def test_watched_episodes_single_page_without_headers():
+    respx.get("https://api.trakt.tv/sync/watched/episodes").respond(200, json=[{"episode": {}}])
     client, _ = make_client()
-    assert client.watched_shows() == [{"show": {}}]
+    assert client.watched_episodes() == [{"episode": {}}]

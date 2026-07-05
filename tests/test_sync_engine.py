@@ -49,7 +49,7 @@ class FakePlex:
 
 class FakeTrakt:
     def __init__(self, watched_movie_ids=(), watched_eps=()):
-        # watched_movie_ids: iterable of imdb ids; watched_eps: {(season, number)}
+        # watched_movie_ids: iterable of imdb ids; watched_eps: iterable of episode trakt ids
         self._movies = [
             {
                 "plays": 1,
@@ -61,19 +61,19 @@ class FakeTrakt:
             }
             for i in watched_movie_ids
         ]
-        self._shows = (
-            [
-                {
-                    "show": {"ids": {"trakt": 1420, "tmdb": 1429}},
-                    "seasons": [
-                        {"number": s, "episodes": [{"number": n, "plays": 1}]}
-                        for (s, n) in watched_eps
-                    ],
-                }
-            ]
-            if watched_eps
-            else []
-        )
+        self._episodes = [
+            {
+                "plays": 1,
+                "last_watched_at": "2026-01-01T00:00:00.000Z",
+                "episode": {
+                    "title": "w",
+                    "season": 1,
+                    "number": 1,
+                    "ids": {"trakt": trakt_id, "tvdb": 100 + trakt_id, "plex": {"guid": "x"}},
+                },
+            }
+            for trakt_id in watched_eps
+        ]
         self.history_posts: list[dict] = []
         self.not_found: dict = {"movies": [], "shows": [], "seasons": [], "episodes": []}
         self.lookup_error = False
@@ -81,8 +81,8 @@ class FakeTrakt:
     def watched_movies(self):
         return self._movies
 
-    def watched_shows(self):
-        return self._shows
+    def watched_episodes(self):
+        return self._episodes
 
     def add_history(self, movies=(), episodes=()):
         self.history_posts.append({"movies": list(movies), "episodes": list(episodes)})
@@ -153,6 +153,22 @@ def test_watched_episode_pushed_by_trakt_id(tmp_path):
     assert report.to_trakt == 1
     posted = trakt.history_posts[0]["episodes"][0]
     assert posted["ids"]["trakt"] == 10
+
+
+def test_trakt_watched_episode_not_repushed(tmp_path):
+    plex = FakePlex([episode(101, "E1", watched=True, season=1, number=1)])
+    trakt = FakeTrakt(watched_eps=[10])  # trakt id 10 = S1E1 in FakeTrakt's episode_table
+    report = make_engine(tmp_path, plex, trakt).run()
+    assert trakt.history_posts == []
+    assert report.to_trakt == 0
+
+
+def test_trakt_watched_episode_marked_in_plex(tmp_path):
+    plex = FakePlex([episode(101, "E1", watched=False, season=1, number=1)])
+    trakt = FakeTrakt(watched_eps=[10])  # trakt id 10 = S1E1 in FakeTrakt's episode_table
+    report = make_engine(tmp_path, plex, trakt).run()
+    assert plex.marked == [101]
+    assert report.to_plex == 1
 
 
 def test_poisoned_item_does_not_abort_run(tmp_path):

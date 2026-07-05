@@ -29,8 +29,8 @@ class TraktClient:
     def watched_movies(self) -> list[dict]:
         return self._get_all_pages("/sync/watched/movies")
 
-    def watched_shows(self) -> list[dict]:
-        return self._get_all_pages("/sync/watched/shows")
+    def watched_episodes(self) -> list[dict]:
+        return self._get_all_pages("/sync/watched/episodes", params={"limit": 1000})
 
     def add_history(self, movies=(), episodes=()) -> dict:
         items = [("movies", m) for m in movies] + [("episodes", e) for e in episodes]

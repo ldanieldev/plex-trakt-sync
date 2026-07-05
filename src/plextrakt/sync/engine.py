@@ -16,28 +16,23 @@ def _iso(epoch: int | None) -> str:
 
 
 class _TraktWatched:
-    def __init__(self, movies: list[dict], shows: list[dict]):
+    def __init__(self, movies: list[dict], episodes: list[dict]):
         self._movie_ids: set[tuple[str, object]] = set()
         for row in movies:
             for k, v in row["movie"]["ids"].items():
                 if isinstance(v, (str, int)):
                     self._movie_ids.add((k, v))
-        self._episodes: dict[int, set[tuple[int, int]]] = {}
-        for row in shows:
-            trakt_id = row["show"]["ids"].get("trakt")
-            eps = {
-                (season["number"], ep["number"])
-                for season in row.get("seasons", [])
-                for ep in season.get("episodes", [])
-            }
-            if trakt_id is not None:
-                self._episodes[trakt_id] = eps
+        self._episode_ids: set[tuple[str, str | int]] = set()
+        for row in episodes:
+            for k, v in row["episode"]["ids"].items():
+                if isinstance(v, (str, int)):
+                    self._episode_ids.add((k, v))
 
     def movie_watched(self, ids) -> bool:
         return any((k, v) in self._movie_ids for k, v in ids.to_dict().items())
 
-    def episode_watched(self, show_trakt_id: int, season: int, number: int) -> bool:
-        return (season, number) in self._episodes.get(show_trakt_id, set())
+    def episode_watched(self, ids) -> bool:
+        return any((k, v) in self._episode_ids for k, v in ids.to_dict().items())
 
 
 class SyncEngine:
@@ -50,7 +45,7 @@ class SyncEngine:
 
     def run(self) -> SyncReport:
         report = SyncReport()
-        watched = _TraktWatched(self._trakt.watched_movies(), self._trakt.watched_shows())
+        watched = _TraktWatched(self._trakt.watched_movies(), self._trakt.watched_episodes())
         queue_movies: list[tuple[dict, str]] = []
         queue_episodes: list[tuple[dict, str]] = []
         scrobbled = self._db.scrobbled_ids()
@@ -86,9 +81,7 @@ class SyncEngine:
             outcome = self._resolver.resolve_episode(
                 show, item.season, item.number, list(item.guids)
             )
-            on_trakt = outcome.status == MATCHED and watched.episode_watched(
-                show.ids.trakt if show.ids else -1, outcome.season, outcome.number
-            )
+            on_trakt = outcome.status == MATCHED and watched.episode_watched(outcome.ids)
 
         if outcome.status != MATCHED:
             report.add_skip(outcome.status, item.title)
