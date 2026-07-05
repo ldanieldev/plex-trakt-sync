@@ -75,15 +75,60 @@ class Resolver:
         positional = next(
             (e for e in table if e["season"] == season and e["number"] == number), None
         )
-        if positional is not None and self._ids_agree(positional["ids"], ext):
-            return MatchOutcome(
-                MATCHED,
-                TraktIds.from_dict(positional["ids"]),
-                season=positional["season"],
-                number=positional["number"],
-            )
 
-        # ordering divergence (or positional miss): reverse-lookup by episode id
+        if positional is not None:
+            if not ext:
+                # nothing to validate against -> accept positional
+                return self._matched_from_entry(positional)
+
+            agreement = self._id_agreement(positional["ids"], ext)
+            if agreement is True:
+                return self._matched_from_entry(positional)
+
+            if agreement is False:
+                # positively contradicted: never accept the positional entry
+                hit = self._reverse_lookup(table, ext, season, number)
+                if hit is not None:
+                    return hit
+                return MatchOutcome(EPISODE_MISSING)
+
+            # agreement is None: no overlapping id types -> unvalidatable
+            hit = self._reverse_lookup(table, ext, season, number)
+            if hit is not None:
+                return hit
+            log.info("positional_accept_unvalidated", season=season, number=number)
+            return self._matched_from_entry(positional)
+
+        # positional miss: reverse-lookup by episode id
+        hit = self._reverse_lookup(table, ext, season, number)
+        if hit is not None:
+            return hit
+        return MatchOutcome(EPISODE_MISSING)
+
+    def _episode_table(self, show_trakt_id: int) -> list[dict]:
+        if show_trakt_id in self._tables:
+            return self._tables[show_trakt_id]
+        now = int(self._now())
+        table = self._db.get_episode_table(show_trakt_id, self._table_ttl_s, now)
+        if table is None:
+            table = self._trakt.episode_table(show_trakt_id)
+            self._db.set_episode_table(show_trakt_id, table, now)
+        self._tables[show_trakt_id] = table
+        return table
+
+    @staticmethod
+    def _matched_from_entry(entry: dict) -> MatchOutcome:
+        return MatchOutcome(
+            MATCHED,
+            TraktIds.from_dict(entry["ids"]),
+            season=entry["season"],
+            number=entry["number"],
+        )
+
+    @staticmethod
+    def _reverse_lookup(
+        table: list[dict], ext: dict, season: int, number: int
+    ) -> MatchOutcome | None:
         for id_type in ("tvdb", "tmdb", "imdb"):
             if id_type not in ext:
                 continue
@@ -103,22 +148,17 @@ class Resolver:
                     season=hit["season"],
                     number=hit["number"],
                 )
-        return MatchOutcome(EPISODE_MISSING)
-
-    def _episode_table(self, show_trakt_id: int) -> list[dict]:
-        if show_trakt_id in self._tables:
-            return self._tables[show_trakt_id]
-        now = int(self._now())
-        table = self._db.get_episode_table(show_trakt_id, self._table_ttl_s, now)
-        if table is None:
-            table = self._trakt.episode_table(show_trakt_id)
-            self._db.set_episode_table(show_trakt_id, table, now)
-        self._tables[show_trakt_id] = table
-        return table
+        return None
 
     @staticmethod
-    def _ids_agree(trakt_ids: dict, plex_ext: dict) -> bool:
+    def _id_agreement(trakt_ids: dict, plex_ext: dict) -> bool | None:
+        """Tri-state comparison of overlapping external id types.
+
+        Returns True if at least one overlapping id type matches, False if
+        overlapping id types exist but all disagree, or None if there are no
+        overlapping id types to compare (unvalidatable).
+        """
         overlap = [k for k in ("tvdb", "tmdb", "imdb") if k in plex_ext and trakt_ids.get(k)]
         if not overlap:
-            return True  # nothing to validate against -> accept positional
+            return None
         return any(trakt_ids[k] == plex_ext[k] for k in overlap)

@@ -130,3 +130,35 @@ def test_episode_table_cached_in_db(tmp_path):
     r.resolve_episode(show, 1, 1, [])
     r.resolve_episode(show, 1, 2, [])
     assert trakt.table_calls == 1
+
+
+def test_sparse_table_entry_reverse_lookup_wins(tmp_path):
+    r, trakt = make_resolver(tmp_path)
+    trakt.tables[1420] = [
+        {"season": 1, "number": 1, "ids": {"trakt": 10}},  # sparse entry
+        {"season": 2, "number": 1, "ids": {"trakt": 20, "tvdb": 300}},
+    ]
+    show = r.resolve_show("plex://show/a", SHOW_GUIDS)
+    out = r.resolve_episode(show, 1, 1, [parse_guid("tvdb://300")])
+    assert out.status == MATCHED
+    assert out.ids.trakt == 20
+    assert out.ordering_fallback is True
+    assert (out.season, out.number) == (2, 1)
+
+
+def test_sparse_table_entry_no_reverse_hit_accepts_positional(tmp_path):
+    r, trakt = make_resolver(tmp_path)
+    trakt.tables[1420] = [{"season": 1, "number": 1, "ids": {"trakt": 10}}]
+    show = r.resolve_show("plex://show/a", SHOW_GUIDS)
+    out = r.resolve_episode(show, 1, 1, [parse_guid("tvdb://999")])
+    assert out.status == MATCHED
+    assert out.ids.trakt == 10
+    assert out.ordering_fallback is False
+
+
+def test_contradicted_positional_never_accepted(tmp_path):
+    r, trakt = make_resolver(tmp_path)
+    trakt.tables[1420] = [{"season": 1, "number": 1, "ids": {"trakt": 10, "tvdb": 100}}]
+    show = r.resolve_show("plex://show/a", SHOW_GUIDS)
+    out = r.resolve_episode(show, 1, 1, [parse_guid("tvdb://999")])
+    assert out.status == EPISODE_MISSING
