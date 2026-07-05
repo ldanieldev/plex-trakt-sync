@@ -2,6 +2,7 @@ services:
   plextrakt:
     image: ghcr.io/OWNER/plextrakt:latest   # replace OWNER after first push
     container_name: plextrakt
+    init: true
     environment:
       PLEX_URL: "http://plex:32400"
       PLEX_TOKEN: "${PLEX_TOKEN}"

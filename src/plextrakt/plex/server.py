@@ -29,6 +29,14 @@ def _parse_all(raw_guids) -> tuple[ParsedGuid, ...]:
     return tuple(p for p in parsed if p is not None)
 
 
+def _guids_with_fallback(raw_guids, guid_str: str) -> tuple[ParsedGuid, ...]:
+    parsed = _parse_all(raw_guids)
+    if parsed:
+        return parsed
+    fallback = parse_guid(guid_str)
+    return (fallback,) if fallback is not None else ()
+
+
 def _epoch(dt) -> int | None:
     return int(dt.timestamp()) if dt else None
 
@@ -51,7 +59,7 @@ class PlexLibrary:
                 media_type="movie",
                 title=m.title,
                 guid=m.guid,
-                guids=_parse_all(m.guids),
+                guids=_guids_with_fallback(m.guids, m.guid),
                 watched=bool(m.viewCount),
                 last_viewed_at=_epoch(m.lastViewedAt),
                 duration_ms=m.duration,
@@ -59,7 +67,8 @@ class PlexLibrary:
 
     def _scan_episodes(self, section) -> Iterator[PlexItem]:
         shows = {
-            int(s.ratingKey): (s.guid, _parse_all(s.guids)) for s in section.search(libtype="show")
+            int(s.ratingKey): (s.guid, _guids_with_fallback(s.guids, s.guid))
+            for s in section.search(libtype="show")
         }
         for ep in section.search(libtype="episode"):
             show_guid, show_guids = shows.get(int(ep.grandparentRatingKey), (None, ()))
@@ -95,7 +104,7 @@ class PlexLibrary:
                 media_type="movie",
                 title=item.title,
                 guid=item.guid,
-                guids=_parse_all(item.guids),
+                guids=_guids_with_fallback(item.guids, item.guid),
                 watched=bool(item.viewCount),
                 last_viewed_at=_epoch(item.lastViewedAt),
                 duration_ms=item.duration,
@@ -111,7 +120,7 @@ class PlexLibrary:
             last_viewed_at=_epoch(item.lastViewedAt),
             duration_ms=item.duration,
             show_guid=show.guid,
-            show_guids=_parse_all(show.guids),
+            show_guids=_guids_with_fallback(show.guids, show.guid),
             season=item.parentIndex,
             number=item.index,
         )
