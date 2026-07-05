@@ -57,8 +57,10 @@ def test_help_lists_commands():
 
 def test_engine_gets_fresh_resolver_per_run(monkeypatch):
     for k, v in {
-        "PLEX_URL": "http://plex:32400", "PLEX_TOKEN": "t",
-        "TRAKT_CLIENT_ID": "c", "TRAKT_CLIENT_SECRET": "s",
+        "PLEX_URL": "http://plex:32400",
+        "PLEX_TOKEN": "t",
+        "TRAKT_CLIENT_ID": "c",
+        "TRAKT_CLIENT_SECRET": "s",
         "STATE_DIR": "/tmp/plextrakt-test-state",
     }.items():
         monkeypatch.setenv(k, v)

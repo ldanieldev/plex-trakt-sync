@@ -96,8 +96,12 @@ def test_owner_session_unknown_key():
 
 def test_legacy_movie_guid_fallback():
     m = FakeMovie(
-        ratingKey=2, title="Psycho", guid="com.plexapp.agents.imdb://tt0054215?lang=en",
-        guids=[], viewCount=1, lastViewedAt=dt(1_700_000_000),
+        ratingKey=2,
+        title="Psycho",
+        guid="com.plexapp.agents.imdb://tt0054215?lang=en",
+        guids=[],
+        viewCount=1,
+        lastViewedAt=dt(1_700_000_000),
     )
     server = FakePlexServer(sections=[FakeSection("movie", movies=[m])])
     item = next(iter(PlexLibrary(server).scan()))
@@ -108,10 +112,14 @@ def test_legacy_movie_guid_fallback():
 def test_legacy_episode_show_attribution_and_empty_own_ids():
     show = FakeShow(11, "com.plexapp.agents.thetvdb://81189?lang=en", [])
     ep = FakeEpisode(
-        ratingKey=101, title="E1", guid="com.plexapp.agents.thetvdb://81189/3/7?lang=en",
-        guids=[], grandparentRatingKey=11,
+        ratingKey=101,
+        title="E1",
+        guid="com.plexapp.agents.thetvdb://81189/3/7?lang=en",
+        guids=[],
+        grandparentRatingKey=11,
         grandparentGuid="com.plexapp.agents.thetvdb://81189?lang=en",
-        parentIndex=3, index=7,
+        parentIndex=3,
+        index=7,
     )
     server = FakePlexServer(sections=[FakeSection("show", shows=[show], episodes=[ep])])
     item = next(iter(PlexLibrary(server).scan()))
