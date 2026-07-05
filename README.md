@@ -47,6 +47,7 @@ Single-user Plex ↔ Trakt watched-status sync and scrobbler. Keeps your Plex an
 |----------|---------|----------|-------|
 | `PLEX_URL` | — | Yes | Full URL, e.g. `http://192.168.1.x:32400` |
 | `PLEX_TOKEN` | — | Yes | Plex API token |
+| `PLEX_EXCLUDE_LIBRARIES` | (empty) | No | Comma-separated Plex library names to skip during sync (case-insensitive) |
 | `TRAKT_CLIENT_ID` | — | Yes | From your registered Trakt app |
 | `TRAKT_CLIENT_SECRET` | — | Yes | From your registered Trakt app |
 | `SYNC_INTERVAL` | `6h` | No | Sync frequency: `30m`, `2h`, `1d`, etc. |
