@@ -135,3 +135,23 @@ def test_scan_skips_excluded_sections():
     server = FakePlexServer(sections=[included, excluded])
     lib = PlexLibrary(server, exclude_libraries=frozenset({"other videos"}))
     assert len(list(lib.scan())) == 1
+
+
+def test_episode_includes_show_title():
+    show = FakeShow(11, "plex://show/s1", [FakeGuidTag("tmdb://1429")])
+    ep = FakeEpisode(
+        ratingKey=101,
+        title="E1",
+        guid="plex://episode/e1",
+        guids=[FakeGuidTag("tvdb://100")],
+        grandparentRatingKey=11,
+        grandparentGuid="plex://show/s1",
+        grandparentTitle="AoT",
+        parentIndex=1,
+        index=1,
+    )
+    server = FakePlexServer(sections=[FakeSection("show", shows=[show], episodes=[ep])])
+    items = list(PlexLibrary(server).scan())
+    assert len(items) == 1
+    item = items[0]
+    assert item.show_title == "AoT"

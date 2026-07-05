@@ -218,3 +218,20 @@ def test_not_found_matches_multikey_ids(tmp_path):
     report = make_engine(tmp_path, plex, trakt).run()
     assert report.skipped["not-found-on-trakt"] == ["Obscure"]
     assert report.to_trakt == 0
+
+
+def test_ordering_fallback_summary_logged_once_per_show(tmp_path, reset_structlog):
+    from structlog.testing import capture_logs
+
+    plex = FakePlex(
+        [
+            episode(101, "E1", watched=False, season=3, number=1, ep_guids=("tvdb://100",)),
+            episode(102, "E2", watched=False, season=3, number=2, ep_guids=("tvdb://101",)),
+        ]
+    )
+    trakt = FakeTrakt()
+    with capture_logs() as logs:
+        make_engine(tmp_path, plex, trakt).run()
+    summaries = [log for log in logs if log["event"] == "ordering_fallback_summary"]
+    assert len(summaries) == 1
+    assert summaries[0]["episodes"] == 2

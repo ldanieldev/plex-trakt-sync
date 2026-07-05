@@ -108,6 +108,13 @@ def sync():
         f"errors={report.errors} skipped={sum(len(v) for v in report.skipped.values())}"
     )
     for category, titles in report.skipped.items():
+        if category == "ordering-mismatch-resolved":
+            count = len(titles)
+            msg = (
+                f"  [{category}] {count} episodes (numbering remapped to Trakt's — see debug logs)"
+            )
+            typer.echo(msg)
+            continue
         for title in titles:
             typer.echo(f"  [{category}] {title}")
 

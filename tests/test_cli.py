@@ -41,6 +41,18 @@ def test_sync_prints_report_and_exits_zero(monkeypatch):
     assert "to_plex=1" in result.output
 
 
+def test_sync_prints_ordering_mismatch_count_only(monkeypatch):
+    report = SyncReport(to_trakt=1, to_plex=0)
+    report.skipped = {"ordering-mismatch-resolved": ["a", "b"]}
+    monkeypatch.setattr(cli, "build_context", lambda: FakeContext(FakeEngine(report=report)))
+    result = runner.invoke(cli.app, ["sync"])
+    assert result.exit_code == 0
+    assert "[ordering-mismatch-resolved] 2 episodes" in result.output
+    # Should NOT print individual episode titles for this category
+    assert "[ordering-mismatch-resolved] a" not in result.output
+    assert "[ordering-mismatch-resolved] b" not in result.output
+
+
 def test_sync_fatal_error_exits_nonzero(monkeypatch):
     monkeypatch.setattr(
         cli, "build_context", lambda: FakeContext(FakeEngine(error=RuntimeError("trakt down")))

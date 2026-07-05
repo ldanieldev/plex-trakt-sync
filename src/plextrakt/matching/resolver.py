@@ -134,7 +134,7 @@ class Resolver:
                 continue
             hit = next((e for e in table if e["ids"].get(id_type) == ext[id_type]), None)
             if hit is not None:
-                log.info(
+                log.debug(
                     "ordering_fallback",
                     season=season,
                     number=number,

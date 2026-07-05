@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
+import pytest
+
 
 class FakeGuidTag:
     def __init__(self, id: str):
@@ -46,6 +48,7 @@ class FakeEpisode:
     duration: int | None = 1_500_000
     type: str = "episode"
     marked: bool = False
+    grandparentTitle: str = ""
 
     def markWatched(self):
         self.marked = True
@@ -98,3 +101,15 @@ class FakePlexServer:
 
 def dt(epoch: int) -> datetime:
     return datetime.fromtimestamp(epoch, tz=UTC)
+
+
+@pytest.fixture
+def reset_structlog():
+    """Reset structlog to default configuration for capture_logs testing."""
+    import structlog
+
+    # Clear any previous structlog configuration
+    structlog.reset_defaults()
+    yield
+    # Reset again after the test
+    structlog.reset_defaults()

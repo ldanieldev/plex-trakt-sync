@@ -22,6 +22,7 @@ class PlexItem:
     show_guids: tuple[ParsedGuid, ...] = ()
     season: int | None = None
     number: int | None = None
+    show_title: str | None = None
 
 
 def _parse_all(raw_guids) -> tuple[ParsedGuid, ...]:
@@ -89,6 +90,7 @@ class PlexLibrary:
                 show_guids=show_guids,
                 season=ep.parentIndex,
                 number=ep.index,
+                show_title=ep.grandparentTitle,
             )
 
     def mark_watched(self, rating_key: int) -> None:
@@ -127,4 +129,5 @@ class PlexLibrary:
             show_guids=_guids_with_fallback(show.guids, show.guid),
             season=item.parentIndex,
             number=item.index,
+            show_title=item.grandparentTitle,
         )

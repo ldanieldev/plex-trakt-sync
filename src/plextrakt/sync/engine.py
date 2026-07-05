@@ -54,14 +54,20 @@ class SyncEngine:
         queue_movies: list[tuple[dict, str]] = []
         queue_episodes: list[tuple[dict, str]] = []
         scrobbled = self._db.scrobbled_ids()
+        fallback_counts: dict[str, int] = {}
 
         for item in self._plex.scan():
             try:
-                self._handle(item, watched, report, queue_movies, queue_episodes, scrobbled)
+                self._handle(
+                    item, watched, report, queue_movies, queue_episodes, scrobbled, fallback_counts
+                )
             except Exception:
                 report.errors += 1
                 metrics.SYNC_ITEMS.labels(direction="to_trakt", outcome="error").inc()
                 log.exception("sync_item_failed", title=item.title, rating_key=item.rating_key)
+
+        for show, n in fallback_counts.items():
+            log.info("ordering_fallback_summary", show=show, episodes=n)
 
         self._push(report, queue_movies, queue_episodes)
         metrics.SYNC_RUNS.labels(result="ok").inc()
@@ -69,7 +75,9 @@ class SyncEngine:
         log.info("sync_done", **report.as_dict())
         return report
 
-    def _handle(self, item, watched, report, queue_movies, queue_episodes, scrobbled):
+    def _handle(
+        self, item, watched, report, queue_movies, queue_episodes, scrobbled, fallback_counts
+    ):
         if item.media_type == "movie":
             outcome = self._resolver.resolve_movie(item.rating_key, item.guid, list(item.guids))
             on_trakt = outcome.status == MATCHED and watched.movie_watched(outcome.ids)
@@ -88,6 +96,8 @@ class SyncEngine:
             return
         if outcome.ordering_fallback:
             report.add_skip("ordering-mismatch-resolved", item.title)
+            key = item.show_title or item.show_guid or "unknown"
+            fallback_counts[key] = fallback_counts.get(key, 0) + 1
 
         if item.watched and not on_trakt:
             if any((item.media_type, v) in scrobbled for v in outcome.ids.to_dict().values()):
