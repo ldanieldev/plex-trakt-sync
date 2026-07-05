@@ -1,4 +1,3 @@
-
 from plextrakt.matching.guid import parse_guid
 from plextrakt.matching.resolver import Resolver
 from plextrakt.plex.server import PlexItem
@@ -169,6 +168,33 @@ def test_not_found_lands_in_report(tmp_path):
     trakt = FakeTrakt()
     trakt.not_found = {
         "movies": [{"ids": {"imdb": "tt9"}}],
+        "shows": [],
+        "seasons": [],
+        "episodes": [],
+    }
+    report = make_engine(tmp_path, plex, trakt).run()
+    assert report.skipped["not-found-on-trakt"] == ["Obscure"]
+    assert report.to_trakt == 0
+
+
+def test_scrobbled_item_not_repushed(tmp_path):
+    plex = FakePlex([episode(101, "E1", watched=True, season=1, number=1)])
+    trakt = FakeTrakt()
+    db = StateDB(tmp_path / "s.db")
+    db.record_scrobble("episode", 10, at=999)  # trakt id 10 = S1E1 in FakeTrakt's table
+    engine = SyncEngine(
+        plex, trakt, Resolver(trakt, db, now=lambda: 1000.0), db, now=lambda: 1000.0
+    )
+    report = engine.run()
+    assert trakt.history_posts == []
+    assert report.to_trakt == 0
+
+
+def test_not_found_matches_multikey_ids(tmp_path):
+    plex = FakePlex([movie(1, "Obscure", watched=True, guids=("imdb://tt9", "tmdb://77"))])
+    trakt = FakeTrakt()
+    trakt.not_found = {
+        "movies": [{"ids": {"imdb": "tt9", "tmdb": 77}}],  # full echo of what was sent
         "shows": [],
         "seasons": [],
         "episodes": [],
