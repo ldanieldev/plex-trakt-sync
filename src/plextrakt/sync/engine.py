@@ -90,7 +90,7 @@ class SyncEngine:
             report.add_skip("ordering-mismatch-resolved", item.title)
 
         if item.watched and not on_trakt:
-            if outcome.ids.trakt is not None and (item.media_type, outcome.ids.trakt) in scrobbled:
+            if any((item.media_type, v) in scrobbled for v in outcome.ids.to_dict().values()):
                 return  # scrobbled since last sync; trakt fetch may not reflect it yet
             payload = {"ids": outcome.ids.to_dict(), "watched_at": _iso(item.last_viewed_at)}
             (queue_movies if item.media_type == "movie" else queue_episodes).append(

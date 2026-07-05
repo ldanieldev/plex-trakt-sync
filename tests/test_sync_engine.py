@@ -190,6 +190,19 @@ def test_scrobbled_item_not_repushed(tmp_path):
     assert report.to_trakt == 0
 
 
+def test_scrobbled_movie_not_repushed_by_external_id(tmp_path):
+    plex = FakePlex([movie(1, "Heat", watched=True, guids=("imdb://tt1",))])
+    trakt = FakeTrakt()  # not in trakt watched response yet
+    db = StateDB(tmp_path / "s.db")
+    db.record_scrobble("movie", "tt1", at=999)
+    engine = SyncEngine(
+        plex, trakt, Resolver(trakt, db, now=lambda: 1000.0), db, now=lambda: 1000.0
+    )
+    report = engine.run()
+    assert trakt.history_posts == []
+    assert report.to_trakt == 0
+
+
 def test_not_found_matches_multikey_ids(tmp_path):
     plex = FakePlex([movie(1, "Obscure", watched=True, guids=("imdb://tt9", "tmdb://77"))])
     trakt = FakeTrakt()

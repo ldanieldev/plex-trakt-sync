@@ -99,8 +99,11 @@ class Scrobbler:
         if result.get("action") != "scrobble":
             return
         ids = result.get(session.media_type, {}).get("ids", {})
-        trakt_id = ids.get("trakt")
-        if trakt_id is not None:
-            self._db.record_scrobble(session.media_type, trakt_id, int(self._now()))
-        else:
+        recorded = False
+        for key in ("trakt", "imdb", "tmdb", "tvdb"):
+            v = ids.get(key)
+            if v is not None:
+                self._db.record_scrobble(session.media_type, v, int(self._now()))
+                recorded = True
+        if not recorded:
             log.warning("scrobble_response_missing_id", media_type=session.media_type)

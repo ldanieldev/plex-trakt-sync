@@ -44,7 +44,11 @@ class FakePlex:
 class FakeTrakt:
     def __init__(self):
         self.calls: list[tuple[str, dict]] = []
-        self.stop_response = {"action": "scrobble", "id": 999, "movie": {"ids": {"trakt": 5}}}
+        self.stop_response = {
+            "action": "scrobble",
+            "id": 999,
+            "movie": {"ids": {"trakt": 5, "imdb": "tt1", "tmdb": 949}},
+        }
 
     def scrobble(self, action, payload):
         self.calls.append((action, payload))
@@ -86,7 +90,7 @@ def test_start_pause_resume_stop_flow(tmp_path):
     assert actions == ["start", "pause", "start", "stop"]
     assert trakt.calls[-1][1]["progress"] == 95.0
     assert trakt.calls[0][1]["movie"]["ids"]["imdb"] == "tt1"
-    assert ("movie", 5) in db.scrobbled_ids()
+    assert {("movie", 5), ("movie", "tt1"), ("movie", 949)} <= db.scrobbled_ids()
 
 
 def test_non_owner_ignored_with_single_lookup(tmp_path):
