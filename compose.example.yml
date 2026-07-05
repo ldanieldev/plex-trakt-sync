@@ -1,0 +1,15 @@
+services:
+  plextrakt:
+    image: ghcr.io/OWNER/plextrakt:latest   # replace OWNER after first push
+    container_name: plextrakt
+    environment:
+      PLEX_URL: "http://plex:32400"
+      PLEX_TOKEN: "${PLEX_TOKEN}"
+      TRAKT_CLIENT_ID: "${TRAKT_CLIENT_ID}"
+      TRAKT_CLIENT_SECRET: "${TRAKT_CLIENT_SECRET}"
+      SYNC_INTERVAL: "6h"
+    volumes:
+      - /mnt/pool/apps/plextrakt:/config
+    ports:
+      - "9308:9308"   # prometheus /metrics
+    restart: unless-stopped
