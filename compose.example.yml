@@ -2,6 +2,7 @@ services:
   plextrakt:
     image: ghcr.io/ldanieldev/plex-trakt-sync:latest
     container_name: plextrakt
+    # user: "1000:1000"   # set to the uid:gid that owns your config dir (image default: 1000)
     init: true
     environment:
       PLEX_URL: "http://plex:32400"
@@ -10,9 +11,9 @@ services:
       TRAKT_CLIENT_ID: "${TRAKT_CLIENT_ID}"
       TRAKT_CLIENT_SECRET: "${TRAKT_CLIENT_SECRET}"
       SYNC_INTERVAL: "6h"
-    # host dir must be owned by uid 1000 (chown -R 1000:1000 /mnt/pool/apps/plextrakt) before first run
+    # the config dir must be writable by the container user (default uid 1000)
     volumes:
-      - /mnt/pool/apps/plextrakt:/config
+      - /path/to/plextrakt/config:/config
     ports:
       - "9308:9308"   # prometheus /metrics
     restart: unless-stopped

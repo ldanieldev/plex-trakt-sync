@@ -1,4 +1,4 @@
-# plextrakt
+# Plex-Trakt-Sync
 
 Single-user Plex ↔ Trakt watched-status sync and scrobbler. Keeps your Plex and Trakt libraries in sync and automatically scrobbles playback to Trakt.
 
@@ -54,6 +54,10 @@ Single-user Plex ↔ Trakt watched-status sync and scrobbler. Keeps your Plex an
 | `LOG_LEVEL` | `INFO` | No | `DEBUG`, `INFO`, `WARNING`, `ERROR` |
 | `LOG_FORMAT` | `json` | No | `json` or `text` |
 | `STATE_DIR` | `/config` | No | Persistent state directory (don't change in container) |
+
+## Container user & volume permissions
+
+The image runs as uid 1000 by default. `PUID`/`PGID` env vars are **not supported** (LinuxServer.io convention — this image ignores them). To fix permission errors like "unable to open database file", either set `user: "<uid>:<gid>"` in compose to match your config volume's owner, or chown the host directory to `1000:1000` and omit the `user:` line.
 
 ## Metrics
 
