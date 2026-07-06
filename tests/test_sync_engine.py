@@ -251,3 +251,17 @@ def test_ordering_fallback_summary_logged_once_per_show(tmp_path, reset_structlo
     summaries = [log for log in logs if log["event"] == "ordering_fallback_summary"]
     assert len(summaries) == 1
     assert summaries[0]["episodes"] == 2
+
+
+def test_not_found_echo_with_nested_plex_ids(tmp_path):
+    plex = FakePlex([movie(1, "Obscure", watched=True, guids=("imdb://tt9",))])
+    trakt = FakeTrakt()
+    trakt.not_found = {
+        "movies": [{"ids": {"imdb": "tt9", "plex": {"guid": "abc", "slug": "obscure"}}}],
+        "shows": [],
+        "seasons": [],
+        "episodes": [],
+    }
+    report = make_engine(tmp_path, plex, trakt).run()
+    assert report.skipped["not-found-on-trakt"] == ["Obscure"]
+    assert report.to_trakt == 0

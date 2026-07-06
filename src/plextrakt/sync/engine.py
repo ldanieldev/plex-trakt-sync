@@ -111,12 +111,15 @@ class SyncEngine:
             movies=[p for p, _ in queue_movies], episodes=[p for p, _ in queue_episodes]
         )
         missed = {
-            frozenset(m["ids"].items())
+            frozenset((k, v) for k, v in m["ids"].items() if isinstance(v, (str, int)))
             for kind in ("movies", "shows", "seasons", "episodes")
             for m in result.get("not_found", {}).get(kind, [])
         }
         for payload, title in queue_movies + queue_episodes:
-            if frozenset(payload["ids"].items()) in missed:
+            if (
+                frozenset((k, v) for k, v in payload["ids"].items() if isinstance(v, (str, int)))
+                in missed
+            ):
                 report.add_skip("not-found-on-trakt", title)
                 metrics.SYNC_ITEMS.labels(direction="to_trakt", outcome="skipped_unmatched").inc()
             else:
