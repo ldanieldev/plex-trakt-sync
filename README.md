@@ -15,7 +15,7 @@ Single-user Plex ↔ Trakt watched-status sync and scrobbler. Keeps your Plex an
      -e PLEX_TOKEN=xxx \
      -e TRAKT_CLIENT_ID=xxx \
      -e TRAKT_CLIENT_SECRET=xxx \
-     ghcr.io/OWNER/plextrakt:latest login
+     ghcr.io/ldanieldev/plex-trakt-sync:latest login
    ```
    Follow the Trakt device flow link, then verify Plex connection.
 
@@ -28,9 +28,8 @@ Single-user Plex ↔ Trakt watched-status sync and scrobbler. Keeps your Plex an
      -e PLEX_TOKEN=xxx \
      -e TRAKT_CLIENT_ID=xxx \
      -e TRAKT_CLIENT_SECRET=xxx \
-     ghcr.io/OWNER/plextrakt:latest run
+     ghcr.io/ldanieldev/plex-trakt-sync:latest run
    ```
-   *Replace `OWNER` after your first push to GitHub.*
 
 ## Commands
 
